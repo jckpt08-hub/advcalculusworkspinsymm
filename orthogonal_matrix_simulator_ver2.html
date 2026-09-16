@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>직교행렬 회전·대칭 시뮬레이터</title>
+<style>
+  :root{
+    --bg:#0b0d12; --panel:#121620; --panel2:#171c28; --line:#2b3242;
+    --text:#f4f7fb; --muted:#a9b3c5; --accent:#8da2ff; --accent2:#7de2d1;
+    --warn:#ffc66d; --danger:#ff8e8e; --ok:#9ae6b4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
+  button,input{font:inherit}
+  .app{height:100vh;display:grid;grid-template-columns:260px minmax(0,1fr) 355px;grid-template-rows:70px minmax(0,1fr)}
+  header{grid-column:1/4;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:#0e1118}
+  .brand{display:flex;align-items:center;gap:14px}.brand-mark{width:40px;height:40px;border:1px solid #49526a;border-radius:12px;display:grid;place-items:center;font-weight:800;letter-spacing:-1px;background:#141925}
+  h1{font-size:18px;margin:0}.sub{font-size:12px;color:var(--muted);margin-top:3px}
+  .header-right{display:flex;align-items:center;gap:12px}
+  .mode-switch{display:flex;gap:7px;background:#151a24;border:1px solid var(--line);padding:5px;border-radius:11px}
+  .mode-switch button{border:0;background:transparent;color:var(--muted);padding:9px 17px;border-radius:8px;cursor:pointer;font-weight:700}
+  .mode-switch button.active{background:#2a3246;color:white}
+  .student-id{font-size:12px;font-weight:800;letter-spacing:.04em;color:#d8dfec;border:1px solid #394258;background:#151a24;padding:10px 12px;border-radius:10px;white-space:nowrap}
+  aside.left,aside.right{background:var(--panel);min-height:0;overflow:auto}
+  aside.left{grid-column:1;grid-row:2;border-right:1px solid var(--line);padding:18px 14px}
+  aside.right{grid-column:3;grid-row:2;border-left:1px solid var(--line);padding:18px}
+  main{grid-column:2;grid-row:2;min-width:0;min-height:0;position:relative;background:#090b10}
+  canvas{width:100%;height:100%;display:block;cursor:crosshair}
+  .panel-title{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#8f9ab1;margin:0 0 12px 2px}
+  .history{display:flex;flex-direction:column;gap:8px}.history-empty{color:#778197;font-size:13px;padding:14px 6px}
+  .history-item{background:#171c27;border:1px solid #2a3140;border-radius:10px;padding:10px 11px}
+  .history-item b{font-size:13px;display:block;margin-bottom:4px}.history-item span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#96a1b7}
+  .group{border:1px solid var(--line);border-radius:13px;background:var(--panel2);padding:13px;margin-bottom:12px}
+  .group h3{font-size:13px;margin:0 0 10px}.grid-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.grid-buttons.two{grid-template-columns:repeat(2,1fr)}
+  button.ctrl{border:1px solid #364055;background:#202737;color:#eef2fa;border-radius:9px;padding:9px 6px;cursor:pointer;font-size:12px;font-weight:700}
+  button.ctrl:hover{background:#293248}.ctrl.danger{border-color:#5a3940;background:#2b1f23;color:#ffd6d6}.ctrl.soft{color:#cbd4e3;background:#181e2a}
+  .axis-row{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:center;margin-top:8px}.axis-label{font-weight:800;color:#aab7ff;text-align:center}
+  .matrix-card{border:1px solid var(--line);background:#10141d;border-radius:12px;padding:12px;margin-top:10px}.matrix-card h4{margin:0 0 8px;font-size:12px;color:#b7c1d4}
+  .matrix-wrap{display:flex;align-items:center;gap:8px}.matrix{position:relative;display:grid;gap:4px;padding:4px 12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.2;min-width:120px;text-align:center}
+  .matrix:before,.matrix:after{content:"";position:absolute;top:0;bottom:0;width:7px;border-top:1.5px solid #c7d0e1;border-bottom:1.5px solid #c7d0e1}.matrix:before{left:0;border-left:1.5px solid #c7d0e1}.matrix:after{right:0;border-right:1.5px solid #c7d0e1}
+  .matrix-row{display:grid;gap:10px}.check{font-size:12px;color:var(--muted);line-height:1.55}.check strong{color:var(--ok)}
+  .coords{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#aeb9cc;max-height:112px;overflow:auto;white-space:pre-wrap;line-height:1.55}
+  .tip{font-size:12px;line-height:1.55;color:#9faabd}.tip b{color:#e3e8f2}
+  .badge{position:absolute;left:16px;top:15px;background:rgba(17,21,30,.9);border:1px solid #30384b;border-radius:10px;padding:9px 11px;font-size:12px;color:#b5c0d4;backdrop-filter:blur(8px);pointer-events:none}
+  .view-controls{position:absolute;right:16px;top:15px;width:220px;background:rgba(17,21,30,.9);border:1px solid #30384b;border-radius:10px;padding:9px 11px;font-size:11px;color:#b5c0d4;backdrop-filter:blur(8px)}
+  .view-controls label{display:grid;grid-template-columns:48px 1fr 32px;gap:6px;align-items:center;margin:5px 0}.view-controls input{width:100%}.view-controls output{text-align:right;color:#e5ebf5}
+  .hidden{display:none!important}
+  @media(max-width:1050px){.app{grid-template-columns:220px minmax(0,1fr) 300px}.sub{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><div class="brand-mark">Q</div><div><h1>직교행렬 회전·대칭 시뮬레이터</h1><div class="sub">Orthogonal Matrix · Rotation · Reflection</div></div></div>
+    <div class="header-right"><div class="mode-switch"><button id="mode2Btn" class="active">2D</button><button id="mode3Btn">3D</button></div><div class="student-id">24146 이찬빈</div></div>
+  </header>
+
+  <aside class="left">
+    <div class="panel-title">최근 10회 변환</div>
+    <div id="history" class="history"></div>
+  </aside>
+
+  <main id="stage">
+    <canvas id="canvas"></canvas>
+    <div id="stageBadge" class="badge"></div>
+    <div id="viewControls" class="view-controls hidden">
+      <label>Yaw <input id="yaw" type="range" min="-75" max="75" value="34"><output id="yawOut">34°</output></label>
+      <label>Pitch <input id="pitch" type="range" min="12" max="70" value="28"><output id="pitchOut">28°</output></label>
+      <div style="margin-top:6px;color:#8793a9">투영 각도만 바뀌며 도형 좌표에는 영향을 주지 않습니다.</div>
+    </div>
+  </main>
+
+  <aside class="right">
+    <section id="controls2d">
+      <div class="group">
+        <h3>2D 회전 · 원점 기준</h3>
+        <div class="grid-buttons"><button class="ctrl" data-2d="rot90">90°</button><button class="ctrl" data-2d="rot180">180°</button><button class="ctrl" data-2d="rot270">270°</button></div>
+      </div>
+      <div class="group">
+        <h3>2D 대칭</h3>
+        <div class="grid-buttons two"><button class="ctrl" data-2d="flipLR">좌우반전</button><button class="ctrl" data-2d="flipUD">상하반전</button></div>
+      </div>
+      <div class="group">
+        <h3>도형 편집</h3>
+        <div class="grid-buttons two"><button id="undo2" class="ctrl soft">마지막 점 취소</button><button id="clear2" class="ctrl danger">전체 초기화</button></div>
+        <p class="tip"><b>사용법</b> · 격자점을 순서대로 클릭하면 다각형 S가 자동으로 닫힙니다. 선택된 점을 다시 클릭하면 제거됩니다.</p>
+      </div>
+    </section>
+
+    <section id="controls3d" class="hidden">
+      <div class="group">
+        <h3>3D 회전 · 원점 기준</h3>
+        <div class="axis-row"><div class="axis-label">X</div><div class="grid-buttons"><button class="ctrl" data-3d-axis="x" data-ang="90">90°</button><button class="ctrl" data-3d-axis="x" data-ang="180">180°</button><button class="ctrl" data-3d-axis="x" data-ang="270">270°</button></div></div>
+        <div class="axis-row"><div class="axis-label">Y</div><div class="grid-buttons"><button class="ctrl" data-3d-axis="y" data-ang="90">90°</button><button class="ctrl" data-3d-axis="y" data-ang="180">180°</button><button class="ctrl" data-3d-axis="y" data-ang="270">270°</button></div></div>
+        <div class="axis-row"><div class="axis-label">Z</div><div class="grid-buttons"><button class="ctrl" data-3d-axis="z" data-ang="90">90°</button><button class="ctrl" data-3d-axis="z" data-ang="180">180°</button><button class="ctrl" data-3d-axis="z" data-ang="270">270°</button></div></div>
+      </div>
+      <div class="group">
+        <h3>3D 축 대칭</h3>
+        <div class="grid-buttons"><button class="ctrl" data-3d-ref="x">x축</button><button class="ctrl" data-3d-ref="y">y축</button><button class="ctrl" data-3d-ref="z">z축</button></div>
+        <p class="tip">예: x축 대칭은 <b>(x,y,z) → (x,−y,−z)</b>입니다.</p>
+      </div>
+      <div class="group">
+        <h3>도형 편집</h3>
+        <div class="grid-buttons two"><button id="undo3" class="ctrl soft">마지막 점 취소</button><button id="clear3" class="ctrl danger">전체 초기화</button></div>
+        <p class="tip"><b>사용법</b> · 3D 격자점 중 투영된 점을 클릭해 꼭짓점을 선택합니다. 4개 이상이면 가능한 면을 계산해 볼록 입체로 표시합니다.</p>
+      </div>
+    </section>
+
+    <div class="matrix-card"><h4>이번 변환 행렬 Q</h4><div id="stepMatrix" class="matrix"></div></div>
+    <div class="matrix-card"><h4>누적 행렬 A</h4><div id="cumMatrix" class="matrix"></div></div>
+    <div class="matrix-card"><h4>직교성 확인</h4><div id="orthCheck" class="check"></div></div>
+    <div class="matrix-card"><h4>현재 꼭짓점 좌표</h4><div id="coords" class="coords"></div></div>
+    <div class="matrix-card"><h4>계산 참고</h4><div class="tip">삼각함수 계산 과정에서 <b>6.123×10⁻¹⁷</b>처럼 부동소수점 오차가 생길 수 있습니다. 이 시뮬레이터는 0, ±1에 매우 가까운 값은 해당 값으로 <b>정규화</b>하고, 그 밖의 소수는 소수 셋째 자리까지 정리해 표시합니다.</div></div>
+  </aside>
+</div>
+<script>
+// v2: transformation-button dataset bindings fixed; coordinates are updated by Q·v immediately.
+(() => {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const stage = document.getElementById('stage');
+  const historyEl = document.getElementById('history');
+  const stepEl = document.getElementById('stepMatrix');
+  const cumEl = document.getElementById('cumMatrix');
+  const orthEl = document.getElementById('orthCheck');
+  const coordsEl = document.getElementById('coords');
+  const badge = document.getElementById('stageBadge');
+  const yawInput = document.getElementById('yaw');
+  const pitchInput = document.getElementById('pitch');
+  const yawOut = document.getElementById('yawOut');
+  const pitchOut = document.getElementById('pitchOut');
+
+  let mode = '2d';
+  let pts2 = [];
+  let pts3 = [];
+  let history = [];
+  let stepMatrix = identity(2);
+  let cumulative = identity(2);
+  let hovered2 = null;
+  let hovered3 = null;
+  let projected3 = [];
+
+  function identity(n){return Array.from({length:n},(_,r)=>Array.from({length:n},(_,c)=>r===c?1:0));}
+  function mul(A,B){return A.map((row,i)=>B[0].map((_,j)=>row.reduce((s,v,k)=>s+v*B[k][j],0)));}
+  function matVec(A,v){return A.map(row=>row.reduce((s,x,i)=>s+x*v[i],0));}
+  function transpose(A){return A[0].map((_,c)=>A.map(r=>r[c]));}
+  function clean(x){if(Math.abs(x)<1e-9)return 0; if(Math.abs(x-1)<1e-9)return 1; if(Math.abs(x+1)<1e-9)return -1; return Math.round(x*1000)/1000;}
+  function cleanM(A){return A.map(r=>r.map(clean));}
+  function determinant(A){
+    if(A.length===2)return A[0][0]*A[1][1]-A[0][1]*A[1][0];
+    return A[0][0]*(A[1][1]*A[2][2]-A[1][2]*A[2][1])-A[0][1]*(A[1][0]*A[2][2]-A[1][2]*A[2][0])+A[0][2]*(A[1][0]*A[2][1]-A[1][1]*A[2][0]);
+  }
+  function isIdentity(A){return A.every((r,i)=>r.every((v,j)=>Math.abs(v-(i===j?1:0))<1e-7));}
+  function matrixText(A){return A.map(r=>'['+r.map(v=>String(clean(v)).padStart(2,' ')).join(' ') +']').join(' ');}
+  function renderMatrix(el,A){el.innerHTML=''; el.style.gridTemplateRows=`repeat(${A.length},auto)`; A.forEach(r=>{const row=document.createElement('div'); row.className='matrix-row'; row.style.gridTemplateColumns=`repeat(${r.length},1fr)`; r.forEach(v=>{const s=document.createElement('span'); s.textContent=clean(v); row.appendChild(s)}); el.appendChild(row)});}
+  function updateInfo(){
+    renderMatrix(stepEl,stepMatrix); renderMatrix(cumEl,cumulative);
+    const qTq=cleanM(mul(transpose(stepMatrix),stepMatrix));
+    const aTa=cleanM(mul(transpose(cumulative),cumulative));
+    orthEl.innerHTML=`QᵀQ = I : <strong>${isIdentity(qTq)?'성립 ✓':'불성립'}</strong><br>AᵀA = I : <strong>${isIdentity(aTa)?'성립 ✓':'불성립'}</strong><br>det(Q) = <strong>${clean(determinant(stepMatrix))}</strong> · det(A) = <strong>${clean(determinant(cumulative))}</strong>`;
+    const P=mode==='2d'?pts2:pts3;
+    coordsEl.textContent=P.length?P.map((p,i)=>`${i+1}. (${p.map(clean).join(', ')})`).join('\n'):'선택된 점이 없습니다.';
+    historyEl.innerHTML='';
+    if(!history.length){const d=document.createElement('div');d.className='history-empty';d.textContent='아직 변환 내역이 없습니다.';historyEl.appendChild(d)}
+    else history.forEach((h,idx)=>{const d=document.createElement('div');d.className='history-item';d.innerHTML=`<b>${idx+1}. ${h.name}</b><span>${h.matrix}</span>`;historyEl.appendChild(d)});
+    badge.textContent=mode==='2d'?`2D · ${pts2.length}개 꼭짓점 · 원점 기준 변환`:`3D · ${pts3.length}개 꼭짓점 · 원점 기준 변환`;
+  }
+  function pushHistory(name,Q){history.push({name,matrix:matrixText(Q)}); if(history.length>10)history.shift();}
+  function applyTransform(Q,name){
+    if(mode==='2d'){if(!pts2.length)return; pts2=pts2.map(p=>matVec(Q,p).map(clean));}
+    else {if(!pts3.length)return; pts3=pts3.map(p=>matVec(Q,p).map(clean));}
+    stepMatrix=Q; cumulative=cleanM(mul(Q,cumulative)); pushHistory(name,Q); updateInfo(); draw();
+  }
+  function resetAll(dim){
+    if(dim===2)pts2=[]; else pts3=[]; history=[]; stepMatrix=identity(dim); cumulative=identity(dim); updateInfo(); draw();
+  }
+  function setMode(m){
+    mode=m; const n=m==='2d'?2:3; history=[]; stepMatrix=identity(n); cumulative=identity(n);
+    document.getElementById('mode2Btn').classList.toggle('active',m==='2d'); document.getElementById('mode3Btn').classList.toggle('active',m==='3d');
+    document.getElementById('controls2d').classList.toggle('hidden',m!=='2d'); document.getElementById('controls3d').classList.toggle('hidden',m!=='3d'); document.getElementById('viewControls').classList.toggle('hidden',m!=='3d');
+    updateInfo(); draw();
+  }
+
+  const rot2 = deg => {const t=deg*Math.PI/180,c=clean(Math.cos(t)),s=clean(Math.sin(t));return [[c,-s],[s,c]]};
+  document.querySelectorAll('[data-2d]').forEach(b=>b.addEventListener('click',()=>{
+    const k=b.dataset['2d']; let Q=null,name='';
+    if(k && k.startsWith('rot')){const a=+k.replace('rot','');Q=rot2(a);name=`2D 반시계 회전 ${a}°`;}
+    else if(k==='flipLR'){Q=[[-1,0],[0,1]];name='2D 좌우반전 · y축 대칭';}
+    else if(k==='flipUD'){Q=[[1,0],[0,-1]];name='2D 상하반전 · x축 대칭';}
+    if(Q) applyTransform(Q,name);
+  }));
+  const rot3=(axis,deg)=>{const t=deg*Math.PI/180,c=clean(Math.cos(t)),s=clean(Math.sin(t)); if(axis==='x')return [[1,0,0],[0,c,-s],[0,s,c]]; if(axis==='y')return [[c,0,s],[0,1,0],[-s,0,c]]; return [[c,-s,0],[s,c,0],[0,0,1]];};
+  document.querySelectorAll('[data-3d-axis]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset['3dAxis'],deg=+b.dataset.ang;if(a && Number.isFinite(deg))applyTransform(rot3(a,deg),`3D ${a.toUpperCase()}축 회전 ${deg}°`)}));
+  document.querySelectorAll('[data-3d-ref]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset['3dRef'];if(!a)return;const Q=a==='x'?[[1,0,0],[0,-1,0],[0,0,-1]]:a==='y'?[[-1,0,0],[0,1,0],[0,0,-1]]:[[-1,0,0],[0,-1,0],[0,0,1]];applyTransform(Q,`3D ${a}축 대칭`)}));
+
+  document.getElementById('mode2Btn').onclick=()=>setMode('2d'); document.getElementById('mode3Btn').onclick=()=>setMode('3d');
+  document.getElementById('undo2').onclick=()=>{pts2.pop();updateInfo();draw()}; document.getElementById('clear2').onclick=()=>resetAll(2);
+  document.getElementById('undo3').onclick=()=>{pts3.pop();updateInfo();draw()}; document.getElementById('clear3').onclick=()=>resetAll(3);
+  yawInput.oninput=()=>{yawOut.value=yawInput.value+'°';draw()}; pitchInput.oninput=()=>{pitchOut.value=pitchInput.value+'°';draw()};
+
+  function resize(){const r=stage.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
+  window.addEventListener('resize',resize);
+  function size(){const r=stage.getBoundingClientRect();return {w:r.width,h:r.height};}
+
+  function draw(){ctx.clearRect(0,0,canvas.width,canvas.height); mode==='2d'?draw2D():draw3D();}
+  function draw2D(){
+    const {w,h}=size(); const range=7; const scale=Math.min(w,h)*0.055; const ox=w/2,oy=h/2;
+    ctx.save();
+    ctx.strokeStyle='#181d28';ctx.lineWidth=1;
+    for(let i=-range;i<=range;i++){ctx.beginPath();ctx.moveTo(ox+i*scale,oy-range*scale);ctx.lineTo(ox+i*scale,oy+range*scale);ctx.stroke();ctx.beginPath();ctx.moveTo(ox-range*scale,oy-i*scale);ctx.lineTo(ox+range*scale,oy-i*scale);ctx.stroke();}
+    ctx.strokeStyle='#667085';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(ox-range*scale,oy);ctx.lineTo(ox+range*scale,oy);ctx.stroke();ctx.beginPath();ctx.moveTo(ox,oy-range*scale);ctx.lineTo(ox,oy+range*scale);ctx.stroke();
+    ctx.fillStyle='#b7c2d6';ctx.font='12px system-ui';ctx.fillText('x',ox+range*scale-12,oy-8);ctx.fillText('y',ox+8,oy-range*scale+14);
+    for(let x=-range;x<=range;x++)for(let y=-range;y<=range;y++){const sx=ox+x*scale,sy=oy-y*scale;ctx.beginPath();ctx.arc(sx,sy,2.1,0,Math.PI*2);ctx.fillStyle='#3c465b';ctx.fill();}
+    if(pts2.length>=2){ctx.beginPath();pts2.forEach((p,i)=>{const sx=ox+p[0]*scale,sy=oy-p[1]*scale;i?ctx.lineTo(sx,sy):ctx.moveTo(sx,sy)});if(pts2.length>=3)ctx.closePath();ctx.fillStyle='rgba(125,226,209,.12)';if(pts2.length>=3)ctx.fill();ctx.strokeStyle='#9bb1ff';ctx.lineWidth=2.5;ctx.stroke();}
+    pts2.forEach((p,i)=>{const sx=ox+p[0]*scale,sy=oy-p[1]*scale;ctx.beginPath();ctx.arc(sx,sy,6,0,Math.PI*2);ctx.fillStyle='#f7f9fc';ctx.fill();ctx.strokeStyle='#7389e8';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#10131a';ctx.font='bold 9px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(i+1,sx,sy+.5)});
+    if(hovered2){ctx.beginPath();ctx.arc(ox+hovered2[0]*scale,oy-hovered2[1]*scale,9,0,Math.PI*2);ctx.strokeStyle='#ffc66d';ctx.lineWidth=1.5;ctx.stroke();}
+    ctx.restore();
+  }
+
+  function vsub(a,b){return a.map((x,i)=>x-b[i])} function dot(a,b){return a.reduce((s,x,i)=>s+x*b[i],0)} function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]} function norm(a){return Math.hypot(...a)} function normalize(a){const n=norm(a)||1;return a.map(x=>x/n)}
+  function cameraBasis(){
+    const yaw=+yawInput.value*Math.PI/180,pitch=+pitchInput.value*Math.PI/180;
+    const cam=[Math.cos(pitch)*Math.sin(yaw),Math.sin(pitch),Math.cos(pitch)*Math.cos(yaw)];
+    const forward=normalize(cam.map(x=>-x)); const up0=[0,1,0]; const right=normalize(cross(forward,up0)); const up=normalize(cross(right,forward)); return {forward,right,up};
+  }
+  function project3(p){const {w,h}=size(),{forward,right,up}=cameraBasis();const scale=Math.min(w,h)*0.085;return {x:w/2+dot(p,right)*scale,y:h/2-dot(p,up)*scale,depth:dot(p,forward),p};}
+  function hullFacets(points){
+    if(points.length<4)return [];
+    const eps=1e-7, facets=new Map();
+    for(let i=0;i<points.length-2;i++)for(let j=i+1;j<points.length-1;j++)for(let k=j+1;k<points.length;k++){
+      const a=points[i],b=points[j],c=points[k], n0=cross(vsub(b,a),vsub(c,a)); if(norm(n0)<eps)continue; let n=normalize(n0),d=dot(n,a),pos=false,neg=false;
+      for(const p of points){const s=dot(n,p)-d;if(s>eps)pos=true;if(s<-eps)neg=true;} if(pos&&neg)continue; if(pos&&!neg){n=n.map(x=>-x);d=-d;}
+      const ids=[];points.forEach((p,idx)=>{if(Math.abs(dot(n,p)-d)<1e-6)ids.push(idx)}); if(ids.length<3)continue;
+      const key=ids.slice().sort((a,b)=>a-b).join(','); if(!facets.has(key))facets.set(key,{n,ids});
+    }
+    return [...facets.values()].map(f=>{
+      const origin=points[f.ids[0]]; let u=null; for(let t=1;t<f.ids.length;t++){const d=vsub(points[f.ids[t]],origin);if(norm(d)>1e-7){u=normalize(d);break}} if(!u)return null; const v=normalize(cross(f.n,u));
+      const arr=f.ids.map(id=>({id,x:dot(points[id],u),y:dot(points[id],v)})).sort((a,b)=>a.x===b.x?a.y-b.y:a.x-b.x);
+      const cr=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x); const lower=[];for(const p of arr){while(lower.length>=2&&cr(lower[lower.length-2],lower[lower.length-1],p)<=1e-9)lower.pop();lower.push(p)} const upper=[];for(let t=arr.length-1;t>=0;t--){const p=arr[t];while(upper.length>=2&&cr(upper[upper.length-2],upper[upper.length-1],p)<=1e-9)upper.pop();upper.push(p)} const hull=lower.slice(0,-1).concat(upper.slice(0,-1)); return {n:f.n,ids:hull.map(q=>q.id)};
+    }).filter(Boolean).filter(f=>f.ids.length>=3);
+  }
+  function draw3D(){
+    const {w,h}=size();
+    projected3=[]; const range=3;
+    const all=[];for(let x=-range;x<=range;x++)for(let y=-range;y<=range;y++)for(let z=-range;z<=range;z++)all.push([x,y,z]);
+    projected3=all.map(project3).sort((a,b)=>a.depth-b.depth);
+    // faint coordinate planes/grid lines
+    ctx.save();ctx.lineWidth=1;ctx.strokeStyle='#1b2130';
+    const line=(a,b,style='#252d3e',width=1)=>{const A=project3(a),B=project3(b);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.strokeStyle=style;ctx.lineWidth=width;ctx.stroke()};
+    for(let i=-range;i<=range;i++){line([-range,0,i],[range,0,i]);line([i,0,-range],[i,0,range]);line([0,-range,i],[0,range,i]);line([0,i,-range],[0,i,range]);line([-range,i,0],[range,i,0]);line([i,-range,0],[i,range,0]);}
+    line([-range-0.4,0,0],[range+0.6,0,0],'#8290a9',1.7); line([0,-range-0.4,0],[0,range+0.6,0],'#a1acbd',1.7); line([0,0,-range-0.4],[0,0,range+0.6],'#b4bed0',1.7);
+    const ax=project3([range+.75,0,0]),ay=project3([0,range+.75,0]),az=project3([0,0,range+.75]);ctx.fillStyle='#dce3ef';ctx.font='12px system-ui';ctx.fillText('x',ax.x,ax.y);ctx.fillText('y',ay.x,ay.y);ctx.fillText('z',az.x,az.y);
+    projected3.forEach(q=>{ctx.beginPath();ctx.arc(q.x,q.y,1.65,0,Math.PI*2);ctx.fillStyle='rgba(95,108,132,.62)';ctx.fill()});
+
+    const facets=hullFacets(pts3); const projPts=pts3.map(project3);
+    if(facets.length){
+      const faceDraw=facets.map(f=>({f,depth:f.ids.reduce((s,id)=>s+projPts[id].depth,0)/f.ids.length})).sort((a,b)=>a.depth-b.depth);
+      faceDraw.forEach(({f})=>{ctx.beginPath();f.ids.forEach((id,t)=>{const q=projPts[id];t?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.fillStyle='rgba(141,162,255,.09)';ctx.fill();ctx.strokeStyle='rgba(152,173,255,.45)';ctx.lineWidth=1.2;ctx.stroke()});
+    } else if(pts3.length>=2){ctx.beginPath();projPts.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));ctx.strokeStyle='#92a8ff';ctx.lineWidth=2;ctx.stroke()}
+    projPts.forEach((q,i)=>{ctx.beginPath();ctx.arc(q.x,q.y,6,0,Math.PI*2);ctx.fillStyle='#f7f9fc';ctx.fill();ctx.strokeStyle='#7389e8';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#10131a';ctx.font='bold 9px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(i+1,q.x,q.y+.5)});
+    if(hovered3){const q=project3(hovered3);ctx.beginPath();ctx.arc(q.x,q.y,9,0,Math.PI*2);ctx.strokeStyle='#ffc66d';ctx.lineWidth=1.5;ctx.stroke()}
+    ctx.restore();
+  }
+
+  function mousePos(e){const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+  canvas.addEventListener('mousemove',e=>{
+    const m=mousePos(e); if(mode==='2d'){const {w,h}=size(),scale=Math.min(w,h)*0.055,ox=w/2,oy=h/2;const x=Math.round((m.x-ox)/scale),y=Math.round((oy-m.y)/scale);hovered2=(Math.abs((ox+x*scale)-m.x)<11&&Math.abs((oy-y*scale)-m.y)<11&&Math.abs(x)<=7&&Math.abs(y)<=7)?[x,y]:null;} else {let best=null,bd=13;for(const q of projected3){const d=Math.hypot(q.x-m.x,q.y-m.y);if(d<bd){bd=d;best=q.p}}hovered3=best;} draw();
+  });
+  canvas.addEventListener('mouseleave',()=>{hovered2=hovered3=null;draw()});
+  canvas.addEventListener('click',()=>{
+    if(mode==='2d'&&hovered2){const idx=pts2.findIndex(p=>p[0]===hovered2[0]&&p[1]===hovered2[1]);if(idx>=0)pts2.splice(idx,1);else pts2.push([...hovered2]); updateInfo();draw();}
+    if(mode==='3d'&&hovered3){const idx=pts3.findIndex(p=>p.every((v,i)=>v===hovered3[i]));if(idx>=0)pts3.splice(idx,1);else pts3.push([...hovered3]); updateInfo();draw();}
+  });
+
+  resize(); updateInfo();
+})();
+</script>
+</body>
+</html>
